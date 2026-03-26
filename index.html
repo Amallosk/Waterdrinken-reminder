@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kos's Hydration Pit Stop</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.js"></script>
+    <style>
+        :root {
+            --bg-dark: #1a1a2e;
+            --bg-panel: #16213e;
+            --racing-red: #e63946;
+            --racing-yellow: #f1c40f;
+            --racing-green: #2ecc71;
+            --text-light: #ffffff;
+            --text-muted: #a0a0b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-light);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Checkered border */
+        .checkered {
+            height: 16px;
+            background-image: repeating-conic-gradient(#333 0% 25%, #fff 0% 50%);
+            background-size: 16px 16px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 30px 20px 20px;
+            background: linear-gradient(180deg, #0f0f23 0%, var(--bg-dark) 100%);
+        }
+
+        header h1 {
+            font-size: clamp(1.4rem, 4vw, 2.2rem);
+            font-weight: 900;
+            letter-spacing: 3px;
+            background: linear-gradient(135deg, var(--racing-red), var(--racing-yellow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-top: 8px;
+            letter-spacing: 2px;
+        }
+
+        /* Main container */
+        main {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Speedometer */
+        .speedometer {
+            position: relative;
+            width: 280px;
+            height: 160px;
+            margin: 30px auto 20px;
+        }
+
+        .gauge-bg {
+            position: absolute;
+            width: 280px;
+            height: 140px;
+            border-radius: 140px 140px 0 0;
+            background: conic-gradient(
+                from 0.75turn,
+                var(--racing-red) 0deg,
+                var(--racing-red) 45deg,
+                var(--racing-yellow) 45deg,
+                var(--racing-yellow) 112.5deg,
+                var(--racing-green) 112.5deg,
+                var(--racing-green) 180deg,
+                transparent 180deg
+            );
+            overflow: hidden;
+        }
+
+        .gauge-inner {
+            position: absolute;
+            width: 220px;
+            height: 110px;
+            border-radius: 110px 110px 0 0;
+            background: var(--bg-dark);
+            top: 30px;
+            left: 30px;
+        }
+
+        .gauge-needle {
+            position: absolute;
+            width: 4px;
+            height: 100px;
+            background: var(--text-light);
+            bottom: 0;
+            left: 138px;
+            transform-origin: bottom center;
+            transform: rotate(-90deg);
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border-radius: 2px;
+            z-index: 2;
+        }
+
+        .gauge-needle::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: var(--text-light);
+            border-radius: 50%;
+            bottom: -8px;
+            left: -6px;
+        }
+
+        .gauge-labels {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 10px;
+            font-size: 0.6rem;
+            color: var(--text-muted);
+        }
+
+        .gauge-center {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+            z-index: 3;
+        }
+
+        .gauge-center .count {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: var(--text-light);
+        }
+
+        .gauge-center .label {
+            font-size: 0.6rem;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #0d1117;
+            border-radius: 6px;
+            margin: 10px 0 30px;
+            overflow: hidden;
+            border: 1px solid #333;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.8s ease, background 0.5s ease;
+            background: linear-gradient(90deg, var(--racing-red), var(--racing-yellow), var(--racing-green));
+        }
+
+        /* Big button */
+        .drink-btn {
+            display: block;
+            width: 100%;
+            padding: 24px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1rem, 3vw, 1.3rem);
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, #1e8449, var(--racing-green));
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.15s, box-shadow 0.15s;
+            box-shadow: 0 0 30px rgba(46, 204, 113, 0.3);
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        .drink-btn:hover {
+            transform: scale(1.03);
+            box-shadow: 0 0 50px rgba(46, 204, 113, 0.5);
+        }
+
+        .drink-btn:active {
+            transform: scale(0.97);
+        }
+
+        .drink-btn.maxed {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            box-shadow: 0 0 20px rgba(52, 73, 94, 0.3);
+            animation: none;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 30px rgba(46, 204, 113, 0.3); }
+            50% { box-shadow: 0 0 50px rgba(46, 204, 113, 0.5); }
+        }
+
+        /* Stats cards */
+        .stats {
+            display: flex;
+            gap: 12px;
+            margin: 24px 0;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            flex: 1;
+            min-width: 120px;
+            background: var(--bg-panel);
+            border-radius: 12px;
+            padding: 16px;
+            border-left: 4px solid var(--racing-red);
+            text-align: center;
+        }
+
+        .stat-card:nth-child(2) {
+            border-left-color: var(--racing-yellow);
+        }
+
+        .stat-card:nth-child(3) {
+            border-left-color: var(--racing-green);
+        }
+
+        .stat-card .stat-label {
+            font-size: 0.55rem;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .stat-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        /* Pit stop log */
+        .log-section {
+            background: var(--bg-panel);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .log-section h3 {
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            color: var(--racing-yellow);
+            margin-bottom: 12px;
+        }
+
+        .log-list {
+            list-style: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-list li {
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .log-list li:last-child {
+            border-bottom: none;
+        }
+
+        .log-list .log-num {
+            color: var(--racing-green);
+            font-weight: 700;
+        }
+
+        .log-list .log-time {
+            color: var(--text-muted);
+        }
+
+        .log-empty {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        /* Alarm overlay */
+        .alarm-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.95);
+            animation: alarm-flash 0.5s ease-in-out infinite alternate;
+        }
+
+        .alarm-overlay.active {
+            display: flex;
+        }
+
+        @keyframes alarm-flash {
+            0% { background: rgba(230, 57, 70, 0.85); }
+            100% { background: rgba(26, 26, 46, 0.95); }
+        }
+
+        .alarm-overlay .alarm-icon {
+            font-size: 80px;
+            animation: alarm-bounce 0.6s ease-in-out infinite alternate;
+        }
+
+        @keyframes alarm-bounce {
+            0% { transform: scale(1) rotate(-5deg); }
+            100% { transform: scale(1.2) rotate(5deg); }
+        }
+
+        .alarm-overlay h2 {
+            font-size: clamp(1.5rem, 6vw, 2.5rem);
+            margin: 20px 0 10px;
+            text-align: center;
+            letter-spacing: 3px;
+        }
+
+        .alarm-overlay p {
+            font-size: clamp(0.9rem, 3vw, 1.2rem);
+            color: var(--racing-yellow);
+            margin-bottom: 30px;
+        }
+
+        .alarm-dismiss {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            padding: 18px 50px;
+            background: var(--racing-green);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            transition: transform 0.15s;
+        }
+
+        .alarm-dismiss:hover {
+            transform: scale(1.05);
+        }
+
+        /* Race car */
+        .racecar {
+            position: fixed;
+            top: 50%;
+            left: -200px;
+            font-size: 80px;
+            z-index: 999;
+            pointer-events: none;
+            filter: drop-shadow(0 0 20px rgba(230, 57, 70, 0.8));
+        }
+
+        .racecar.go {
+            animation: racecar-fly 1.5s ease-in-out forwards;
+        }
+
+        @keyframes racecar-fly {
+            0%   { left: -200px; top: 50%; transform: translateY(-50%) scaleX(-1); }
+            30%  { top: 45%; }
+            60%  { top: 55%; }
+            100% { left: calc(100vw + 200px); top: 50%; transform: translateY(-50%) scaleX(-1); }
+        }
+
+        /* Goal reached celebration */
+        .goal-reached {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: var(--racing-green);
+            letter-spacing: 2px;
+            display: none;
+        }
+
+        .goal-reached.visible {
+            display: block;
+            animation: goal-pop 0.5s ease-out;
+        }
+
+        @keyframes goal-pop {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text-muted);
+            font-size: 0.5rem;
+            letter-spacing: 1px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    </style>
+</head>
+<body>
+
+<div class="checkered"></div>
+
+<header>
+    <h1>KOS'S HYDRATION PIT STOP</h1>
+    <p>STAY HYDRATED. STAY FAST.</p>
+</header>
+
+<main>
+    <!-- Speedometer -->
+    <div class="speedometer">
+        <div class="gauge-bg">
+            <div class="gauge-inner"></div>
+        </div>
+        <div class="gauge-needle" id="needle"></div>
+        <div class="gauge-center">
+            <div class="count" id="glassCount">0 / 8</div>
+            <div class="label">GLAZEN</div>
+        </div>
+        <div class="gauge-labels">
+            <span>0</span>
+            <span>2</span>
+            <span>4</span>
+            <span>6</span>
+            <span>8</span>
+        </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="progress-bar">
+        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+    </div>
+
+    <!-- Drink button -->
+    <button class="drink-btn" id="drinkBtn" onclick="drinkWater()">
+        IK HEB WATER GEDRONKEN!
+    </button>
+
+    <div class="goal-reached" id="goalReached">
+        CHECKERED FLAG! DOEL BEREIKT!
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-label">LAATSTE PITSTOP</div>
+            <div class="stat-value" id="lastDrink">--:--</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">GLAZEN VANDAAG</div>
+            <div class="stat-value" id="glassesToday">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">VOLGENDE REMINDER</div>
+            <div class="stat-value" id="nextReminder">60:00</div>
+        </div>
+    </div>
+
+    <!-- Pit stop log -->
+    <div class="log-section">
+        <h3>PITSTOP LOG</h3>
+        <ul class="log-list" id="logList">
+            <li class="log-empty">Nog geen pitstops vandaag...</li>
+        </ul>
+    </div>
+</main>
+
+<footer>
+    HYDRATION RACING TEAM &copy; 2026
+</footer>
+
+<!-- Alarm overlay -->
+<div class="alarm-overlay" id="alarmOverlay">
+    <div class="alarm-icon">💧</div>
+    <h2>PITSTOP TIME!</h2>
+    <p>DRINK WATER, KOS!</p>
+    <button class="alarm-dismiss" onclick="dismissAlarm()">OK, IK GA DRINKEN!</button>
+</div>
+
+<!-- Race car element -->
+<div class="racecar" id="racecar">🏎️</div>
+
+<div class="checkered"></div>
+
+<script>
+    // ===== DATA PERSISTENCE =====
+    const STORAGE_KEY = 'kos-hydration-data';
+    const GOAL = 8;
+    const REMINDER_INTERVAL = 60 * 60 * 1000; // 60 minutes in ms
+
+    let audioCtx = null;
+    let alarmInterval = null;
+
+    function getToday() {
+        return new Date().toISOString().slice(0, 10);
+    }
+
+    function loadData() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                const data = JSON.parse(raw);
+                if (data.date === getToday()) {
+                    return data;
+                }
+            }
+        } catch (e) { /* ignore */ }
+        return { date: getToday(), glasses: 0, log: [], lastReminderTime: Date.now() };
+    }
+
+    function saveData(data) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch (e) { /* ignore */ }
+    }
+
+    let data = loadData();
+
+    // ===== AUDIO =====
+    function ensureAudioCtx() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        return audioCtx;
+    }
+
+    function playAlarmSound() {
+        const ctx = ensureAudioCtx();
+        for (let i = 0; i < 8; i++) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = i % 2 === 0 ? 880 : 660;
+            osc.type = 'square';
+            gain.gain.value = 0.15;
+            osc.start(ctx.currentTime + i * 0.3);
+            osc.stop(ctx.currentTime + i * 0.3 + 0.25);
+        }
+    }
+
+    function playVroomSound() {
+        const ctx = ensureAudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.3);
+        osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 1.2);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.5);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 1.5);
+    }
+
+    // ===== UI UPDATES =====
+    function updateUI() {
+        const glasses = data.glasses;
+        const pct = Math.min(glasses / GOAL, 1);
+
+        // Speedometer needle: -90deg (0 glasses) to 90deg (8 glasses)
+        const angle = -90 + (pct * 180);
+        document.getElementById('needle').style.transform = `rotate(${angle}deg)`;
+
+        // Count display
+        document.getElementById('glassCount').textContent = `${glasses} / ${GOAL}`;
+
+        // Progress bar
+        document.getElementById('progressFill').style.width = `${pct * 100}%`;
+
+        // Stats
+        document.getElementById('glassesToday').textContent = glasses;
+
+        // Last drink
+        if (data.log.length > 0) {
+            document.getElementById('lastDrink').textContent = data.log[data.log.length - 1];
+        } else {
+            document.getElementById('lastDrink').textContent = '--:--';
+        }
+
+        // Button state
+        const btn = document.getElementById('drinkBtn');
+        if (glasses >= GOAL) {
+            btn.classList.add('maxed');
+            btn.textContent = 'DOEL BEREIKT! MAAR DRINK GERUST MEER!';
+            document.getElementById('goalReached').classList.add('visible');
+        } else {
+            btn.classList.remove('maxed');
+            btn.textContent = 'IK HEB WATER GEDRONKEN!';
+            document.getElementById('goalReached').classList.remove('visible');
+        }
+
+        // Log
+        updateLog();
+    }
+
+    function updateLog() {
+        const logList = document.getElementById('logList');
+        if (data.log.length === 0) {
+            logList.innerHTML = '<li class="log-empty">Nog geen pitstops vandaag...</li>';
+            return;
+        }
+        logList.innerHTML = data.log.map((time, i) =>
+            `<li><span class="log-num">PITSTOP #${i + 1}</span><span class="log-time">${time}</span></li>`
+        ).reverse().join('');
+    }
+
+    function updateCountdown() {
+        const elapsed = Date.now() - data.lastReminderTime;
+        const remaining = Math.max(0, REMINDER_INTERVAL - elapsed);
+        const mins = Math.floor(remaining / 60000);
+        const secs = Math.floor((remaining % 60000) / 1000);
+        document.getElementById('nextReminder').textContent =
+            `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+        if (remaining <= 0) {
+            triggerAlarm();
+        }
+    }
+
+    function updateLastDrinkTime() {
+        if (data.log.length === 0) return;
+        const lastTime = data.log[data.log.length - 1];
+        const [h, m] = lastTime.split(':').map(Number);
+        const now = new Date();
+        const lastDate = new Date();
+        lastDate.setHours(h, m, 0, 0);
+        const diffMs = now - lastDate;
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) {
+            document.getElementById('lastDrink').textContent = 'NU!';
+        } else if (diffMins < 60) {
+            document.getElementById('lastDrink').textContent = `${diffMins} min`;
+        } else {
+            document.getElementById('lastDrink').textContent = lastTime;
+        }
+    }
+
+    // ===== CELEBRATIONS =====
+    function fireConfetti() {
+        // Left burst
+        confetti({ particleCount: 80, spread: 70, origin: { x: 0.1, y: 0.6 }, colors: ['#e63946', '#f1c40f', '#2ecc71', '#ffffff'] });
+        // Right burst
+        confetti({ particleCount: 80, spread: 70, origin: { x: 0.9, y: 0.6 }, colors: ['#e63946', '#f1c40f', '#2ecc71', '#ffffff'] });
+        // Center shower
+        setTimeout(() => {
+            confetti({ particleCount: 150, spread: 160, origin: { x: 0.5, y: 0.2 }, colors: ['#e63946', '#f1c40f', '#2ecc71', '#ffffff'] });
+        }, 200);
+    }
+
+    function launchRaceCar() {
+        const car = document.getElementById('racecar');
+        car.classList.remove('go');
+        // Force reflow to restart animation
+        void car.offsetWidth;
+        car.classList.add('go');
+        car.addEventListener('animationend', () => {
+            car.classList.remove('go');
+        }, { once: true });
+    }
+
+    // ===== MAIN ACTIONS =====
+    function drinkWater() {
+        // Check for new day
+        if (data.date !== getToday()) {
+            data = { date: getToday(), glasses: 0, log: [], lastReminderTime: Date.now() };
+        }
+
+        // Add glass
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        data.glasses++;
+        data.log.push(timeStr);
+        saveData(data);
+
+        // Celebrate!
+        fireConfetti();
+        launchRaceCar();
+        playVroomSound();
+
+        // Extra celebration at goal
+        if (data.glasses === GOAL) {
+            setTimeout(() => {
+                fireConfetti();
+                fireConfetti();
+            }, 1000);
+        }
+
+        updateUI();
+    }
+
+    function triggerAlarm() {
+        document.getElementById('alarmOverlay').classList.add('active');
+        playAlarmSound();
+        // Repeat alarm sound every 3 seconds
+        alarmInterval = setInterval(playAlarmSound, 3000);
+
+        // Try browser notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('PITSTOP TIME!', {
+                body: 'Drink water, Kos!',
+                icon: '💧'
+            });
+        }
+    }
+
+    function dismissAlarm() {
+        document.getElementById('alarmOverlay').classList.remove('active');
+        if (alarmInterval) {
+            clearInterval(alarmInterval);
+            alarmInterval = null;
+        }
+        data.lastReminderTime = Date.now();
+        saveData(data);
+    }
+
+    // ===== INIT =====
+    function init() {
+        updateUI();
+
+        // Request notification permission
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        // Check if alarm should have fired while page was closed
+        const elapsed = Date.now() - data.lastReminderTime;
+        if (elapsed >= REMINDER_INTERVAL) {
+            triggerAlarm();
+        }
+
+        // Tick every second
+        setInterval(() => {
+            updateCountdown();
+            updateLastDrinkTime();
+
+            // Check for new day
+            if (data.date !== getToday()) {
+                data = { date: getToday(), glasses: 0, log: [], lastReminderTime: Date.now() };
+                saveData(data);
+                updateUI();
+            }
+        }, 1000);
+
+        updateCountdown();
+    }
+
+    init();
+</script>
+
+</body>
+</html>
